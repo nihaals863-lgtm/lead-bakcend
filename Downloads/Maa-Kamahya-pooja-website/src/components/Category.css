@@ -1,0 +1,16 @@
+.card-container {
+    display: flex !important;
+    gap: 20px !important; /* Space between cards */
+    overflow-x: scroll !important;
+    scroll-behavior: smooth !important;
+    padding-bottom: 10px !important;
+  }
+  
+
+  
+  /* Space between cards and consistent width */
+  .card-wrapper {
+    flex: 0 0 auto !important;
+    width: 420px !important;
+  }
+  

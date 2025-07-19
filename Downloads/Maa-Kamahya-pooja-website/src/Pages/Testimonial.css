@@ -1,0 +1,128 @@
+/* Root Variables */
+
+
+/* Global Styling */
+.testimonial-web-section {
+    padding: 80px 0;
+    background-color: #f8f9fa;
+  }
+  
+  .testimonial-web-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  
+  /* Title */
+  .testimonial-web-title {
+    color: var(--primary-text);
+    font-size: 30px;
+  
+   
+    margin-bottom: 40px;
+    position: relative;
+  }
+  
+  .testimonial-web-title::before,
+  .testimonial-web-title::after {
+    content: "";
+    position: absolute;
+    left: 25%;
+    top: 50%;
+    width: 45px;
+    height: 2px;
+    background-color: var(--secondary-text);
+  }
+  .testimonial-web-title::after {
+    left: unset;
+    right: 25%;
+  }
+  
+  /* Swiper Wrapper */
+  .testimonial-web-wrapper {
+    padding: 20px;
+  }
+  
+  /* Testimonial Card */
+  .testimonial-web-items {
+    background: white;
+    border-radius: 20px;
+    padding: 25px;
+    color: var(--white-text);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: 0.3s ease-in-out;
+    
+  }
+  
+  .testimonial-web-items:hover {
+    transform: translateY(-5px);
+  }
+  
+  /* Profile Image */
+  .testimonial-web-img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid var(--secondary-text);
+    margin-bottom: 15px;
+  }
+  
+  .testimonial-web-img img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  
+  /* Text */
+  .testimonial-web-text {
+    font-size: 16px;
+   
+    margin-bottom: 20px;
+    max-width: 280px;
+  }
+  
+  /* Stars */
+  .testimonial-web-stars {
+    color: var(--secondary-text);
+    font-size: 20px;
+    margin-top: 10px;
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .testimonial-web-title {
+      font-size: 28px;
+    }
+  
+    .testimonial-web-items {
+      padding: 20px;
+    }
+  
+    .testimonial-web-text {
+      font-size: 14px;
+    }
+  
+    .testimonial-web-img {
+      width: 70px;
+      height: 70px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .testimonial-web-title {
+      font-size: 24px;
+    }
+  
+    .testimonial-web-items {
+      padding: 15px;
+    }
+  
+    .testimonial-web-text {
+      font-size: 13px;
+    }
+  }

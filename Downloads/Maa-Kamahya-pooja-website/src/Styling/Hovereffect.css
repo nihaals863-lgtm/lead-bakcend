@@ -1,0 +1,15 @@
+
+/* .zoomeffcte:hover {
+    transform: scale(1.1);
+  }
+  .zoomeffcte {
+    transition: transform 0.5s;
+  } */
+  
+.zoomeffcte:hover {
+    transform: scale(1.1);
+  }
+  .zoomeffcte {
+    transition: transform 1.5s;
+  }
+  
