@@ -1,0 +1,383 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  TECHNICIAN
+  CUSTOMER
+}
+
+enum JobStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum EstimateStatus {
+  PENDING
+  APPROVED
+  REVISED
+  REJECTED
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PARTIAL
+  PAID
+  OVERDUE
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(CUSTOMER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employee  Employee?
+  customer  Customer?
+
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+  verification     VerificationRequest?
+  teamMessages     TeamMessage[]
+  calendarEvents   CalendarEvent[] @relation("CreatedBy")
+  jobLedgerEntries JobLedger[]
+}
+
+model Customer {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @unique
+  name      String
+  phone     String
+  email     String   @unique
+  address   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User?    @relation(fields: [userId], references: [id])
+  jobs      Job[]
+  estimates Estimate[]
+  invoices  Invoice[]
+  financingApplications FinancingApplication[]
+  calendarEvents        CalendarEvent[]
+}
+
+model Employee {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  name      String
+  phone     String?
+  role      Role     @default(TECHNICIAN)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id])
+  assignedJobs Job[] @relation("AssignedTo")
+  timesheets Timesheet[]
+  materialRequests MaterialRequest[]
+  calendarEvents   CalendarEvent[]
+}
+
+model Job {
+  id          Int       @id @default(autoincrement())
+  customerId  Int
+  estimateId  Int?      @unique
+  title       String
+  description String?
+  assignedTo  Int?
+  status      JobStatus @default(SCHEDULED)
+  progress    Int       @default(0)
+  scheduledAt DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  customer    Customer  @relation(fields: [customerId], references: [id])
+  technician  Employee? @relation("AssignedTo", fields: [assignedTo], references: [id])
+  estimate    Estimate? @relation(fields: [estimateId], references: [id])
+  invoice     Invoice?
+  notes       Note[]
+  photos      Photo[]
+  messages    Message[]
+  calendarEvents CalendarEvent[]
+  jobLedgerEntries JobLedger[]
+}
+
+model Note {
+  id        Int      @id @default(autoincrement())
+  jobId     Int
+  content   String
+  createdAt DateTime @default(now())
+
+  job       Job      @relation(fields: [jobId], references: [id])
+}
+
+model Photo {
+  id        Int      @id @default(autoincrement())
+  jobId     Int
+  url       String
+  createdAt DateTime @default(now())
+
+  job       Job      @relation(fields: [jobId], references: [id])
+}
+
+model Estimate {
+  id          Int            @id @default(autoincrement())
+  customerId  Int
+  status      EstimateStatus @default(PENDING)
+  projectTitle String?
+  totalAmount  Decimal        @db.Decimal(10, 2)
+  notes        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  customer     Customer       @relation(fields: [customerId], references: [id])
+  items        EstimateItem[]
+  job          Job?
+}
+
+model EstimateItem {
+  id          Int      @id @default(autoincrement())
+  estimateId  Int
+  description String
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  total       Decimal  @db.Decimal(10, 2)
+
+  estimate    Estimate @relation(fields: [estimateId], references: [id])
+}
+
+model Invoice {
+  id         Int           @id @default(autoincrement())
+  customerId Int
+  jobId      Int?          @unique
+  status     InvoiceStatus @default(UNPAID)
+  total      Decimal       @db.Decimal(10, 2)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  customer   Customer      @relation(fields: [customerId], references: [id])
+  job        Job?          @relation(fields: [jobId], references: [id])
+  payments   Payment[]
+}
+
+model Payment {
+  id        Int      @id @default(autoincrement())
+  invoiceId Int
+  amount    Decimal  @db.Decimal(10, 2)
+  type      String   // LABOR, MATERIAL, etc.
+  createdAt DateTime @default(now())
+
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
+}
+
+model Timesheet {
+  id          Int      @id @default(autoincrement())
+  employeeId  Int
+  date        DateTime @db.Date
+  clockIn     DateTime
+  clockOut    DateTime?
+  totalHours  Decimal? @db.Decimal(5, 2)
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  employee    Employee @relation(fields: [employeeId], references: [id])
+}
+
+model MaterialRequest {
+  id          Int      @id @default(autoincrement())
+  employeeId  Int
+  name        String
+  sku         String
+  quantity    Int
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  employee    Employee @relation(fields: [employeeId], references: [id])
+}
+
+model Message {
+  id          Int      @id @default(autoincrement())
+  senderId    Int
+  receiverId  Int
+  jobId       Int?
+  content     String   @db.Text
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  job         Job?     @relation(fields: [jobId], references: [id])
+}
+
+model VerificationRequest {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @unique
+  idPhotoUrl  String?  @db.Text
+  selfieUrl   String?  @db.Text
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  reason      String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model FinancingApplication {
+  id              Int      @id @default(autoincrement())
+  customerId      Int
+  provider        String
+  amount          Decimal  @db.Decimal(10, 2)
+  annualIncome    Decimal  @db.Decimal(10, 2)
+  ssnLast4        String
+  term            String   @default("12 Months")
+  apr             String   @default("0%")
+  status          String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  customer        Customer @relation(fields: [customerId], references: [id])
+}
+
+model Integration {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  category  String   // 'SUPPLIER' or 'GATEWAY'
+  status    String   @default("Not Connected")
+  desc      String?
+  icon      String?
+  config    Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TeamMessage {
+  id        Int      @id @default(autoincrement())
+  senderId  Int
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  sender    User     @relation(fields: [senderId], references: [id])
+}
+
+model Material {
+  id              Int      @id @default(autoincrement())
+  name            String   @unique
+  sku             String?
+  lowesPrice      Decimal  @db.Decimal(10, 2)
+  homeDepotPrice  Decimal  @db.Decimal(10, 2)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model CalendarEvent {
+  id           Int      @id @default(autoincrement())
+  title        String
+  date         DateTime @db.Date
+  time         String?
+  technicianId Int?
+  jobId        Int?
+  customerId   Int?
+  notes        String?  @db.Text
+  priority     String   @default("Medium")
+  createdById  Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  createdBy    User      @relation("CreatedBy", fields: [createdById], references: [id])
+  technician   Employee? @relation(fields: [technicianId], references: [id])
+  job          Job?      @relation(fields: [jobId], references: [id])
+  customer     Customer? @relation(fields: [customerId], references: [id])
+}
+
+enum LedgerType {
+  CREDIT
+  DEBIT
+}
+
+enum LedgerCategory {
+  DEPOSIT
+  MATERIAL
+  LABOR
+  PERMIT
+  SUBCONTRACTOR
+  EQUIPMENT
+  MISC
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+  CHECK
+}
+
+enum LeadStatus {
+  NEW
+  REVIEWING
+  SCHEDULED
+  REJECTED
+  CONVERTED
+}
+
+model JobLedger {
+  id              Int            @id @default(autoincrement())
+  jobId           Int
+  type            LedgerType
+  category        LedgerCategory
+  amount          Decimal        @db.Decimal(10, 2)
+  paymentMethod   PaymentMethod?
+  referenceNumber String?
+  note            String?        @db.Text
+  transactionDate DateTime       @default(now())
+  createdById     Int
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  job       Job  @relation(fields: [jobId], references: [id])
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  @@index([jobId])
+}
+
+model Lead {
+  id                String     @id @default(cuid())
+  firstName         String
+  lastName          String
+  email             String
+  phone             String
+  address           String
+  city              String
+  state             String
+  zipCode           String
+  serviceType       String
+  jobDescription    String     @db.Text
+  preferredDate     DateTime?
+  preferredTimeSlot String?
+  status            LeadStatus @default(NEW)
+  
+  // Schedule Proposal
+  proposedDate      DateTime?
+  proposedTimeSlot  String?
+  internalNote      String?    @db.Text
+  customerMessage   String?    @db.Text
+  
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+}
