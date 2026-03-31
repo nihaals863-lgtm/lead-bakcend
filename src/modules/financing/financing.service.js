@@ -46,8 +46,16 @@ const updateStatus = async (id, status) => {
   });
 };
 
+const getProviders = async () => {
+  return await prisma.financingProvider.findMany({
+    where: { active: true },
+    orderBy: { name: 'asc' }
+  });
+};
+
 module.exports = {
   getAllApplications,
   createApplication,
-  updateStatus
+  updateStatus,
+  getProviders
 };

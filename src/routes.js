@@ -24,6 +24,7 @@ const calendarRoutes = require('./modules/calendar/calendar.routes');
 const jobLedgerRoutes = require('./modules/jobLedger/jobLedger.routes');
 const leadRoutes = require('./modules/leads/leads.routes');
 const settingsRoutes = require('./modules/settings/settings.routes');
+const notificationsRoutes = require('./modules/notifications/notifications.routes');
 
 router.use('/auth', authRoutes);
 router.use('/customers', customerRoutes);
@@ -46,5 +47,6 @@ router.use('/calendar', calendarRoutes);
 router.use('/job-ledger', jobLedgerRoutes);
 router.use('/leads', leadRoutes);
 router.use('/settings', settingsRoutes);
+router.use('/notifications', notificationsRoutes);
 
 module.exports = router;

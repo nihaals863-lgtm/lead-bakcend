@@ -73,4 +73,7 @@ const initSocket = (server) => {
   return io;
 };
 
-module.exports = { initSocket };
+const getIO = () => io;
+const getOnlineUsers = () => onlineUsers;
+
+module.exports = { initSocket, getIO, getOnlineUsers };

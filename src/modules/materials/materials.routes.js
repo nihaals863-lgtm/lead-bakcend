@@ -1,8 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const ctrl = require('./materials.controller');
+const materialsController = require('./materials.controller');
 const { authenticate } = require('../../middlewares/auth');
 
-router.get('/pricing', authenticate, ctrl.getPricingResults);
+router.use(authenticate);
+
+router.get('/', materialsController.getMaterials);
+router.post('/', materialsController.createMaterial);
+router.get('/suppliers', materialsController.getSuppliers);
+router.get('/pricing', materialsController.getPricing);
 
 module.exports = router;

@@ -7,5 +7,6 @@ const { authorize } = require('../../middlewares/role');
 router.get('/', authenticate, authorize(['ADMIN', 'MANAGER']), financingController.getApplications);
 router.post('/', authenticate, financingController.submitApplication);
 router.patch('/:id/status', authenticate, authorize(['ADMIN', 'MANAGER']), financingController.updateApplicationStatus);
+router.get('/providers', authenticate, financingController.getProviders);
 
 module.exports = router;

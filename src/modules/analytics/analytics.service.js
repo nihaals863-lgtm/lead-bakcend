@@ -53,18 +53,41 @@ const getManagerKPIs = async () => {
 };
 
 const getAdminKPIs = async () => {
-  const [activeJobs, pendingEstimates, totalRevenue, completedJobs] = await Promise.all([
+  const now = new Date();
+  const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+  const [
+    activeJobs, 
+    pendingEstimates, 
+    currentRevenue, 
+    completedJobs,
+    lastMonthJobs,
+    lastMonthRevenue
+  ] = await Promise.all([
     prisma.job.count({ where: { status: { in: ['SCHEDULED', 'IN_PROGRESS'] } } }),
     prisma.estimate.count({ where: { status: 'PENDING' } }),
-    prisma.payment.aggregate({ _sum: { amount: true } }),
-    prisma.job.count({ where: { status: 'COMPLETED' } })
+    prisma.payment.aggregate({ _sum: { amount: true }, where: { createdAt: { gte: startOfCurrentMonth } } }),
+    prisma.job.count({ where: { status: 'COMPLETED', updatedAt: { gte: startOfCurrentMonth } } }),
+    prisma.job.count({ where: { status: 'COMPLETED', updatedAt: { gte: startOfLastMonth, lt: startOfCurrentMonth } } }),
+    prisma.payment.aggregate({ _sum: { amount: true }, where: { createdAt: { gte: startOfLastMonth, lt: startOfCurrentMonth } } })
   ]);
 
+  const calculateTrend = (current, last) => {
+    if (!last || last === 0) return current > 0 ? '+100%' : '0%';
+    const pct = ((current - last) / last) * 100;
+    return `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
+  };
+
+  const revenueTrend = calculateTrend(Number(currentRevenue._sum.amount || 0), Number(lastMonthRevenue._sum.amount || 0));
+  const jobsTrend = calculateTrend(completedJobs, lastMonthJobs);
+
   return [
-    { label: 'Active Jobs', value: activeJobs.toString(), trend: '+4.2%', isPositive: true, color: 'from-brand-purple to-indigo-500' },
-    { label: 'Pending Estimates', value: pendingEstimates.toString(), trend: '-2.1%', isPositive: false, color: 'from-blue-500 to-cyan-500' },
-    { label: 'Total Revenue', value: `$${(totalRevenue._sum.amount || 0).toLocaleString()}`, trend: '+12.5%', isPositive: true, color: 'from-brand-cyan to-teal-500' },
-    { label: 'Completed (MTD)', value: completedJobs.toString(), trend: '+8.4%', isPositive: true, color: 'from-emerald-400 to-teal-400' },
+    { label: 'Active Jobs', value: activeJobs.toString(), trend: 'Currently Dispatched', isPositive: true, color: 'from-brand-purple to-indigo-500' },
+    { label: 'Pending Estimates', value: pendingEstimates.toString(), trend: 'Awaiting Approval', isPositive: false, color: 'from-blue-500 to-cyan-500' },
+    { label: 'Total Revenue (MTD)', value: `$${(currentRevenue._sum.amount || 0).toLocaleString()}`, trend: revenueTrend, isPositive: parseFloat(revenueTrend) >= 0, color: 'from-brand-cyan to-teal-500' },
+    { label: 'Completed (MTD)', value: completedJobs.toString(), trend: jobsTrend, isPositive: parseFloat(jobsTrend) >= 0, color: 'from-emerald-400 to-teal-400' },
   ];
 };
 

@@ -12,6 +12,7 @@ router.patch('/:id/status', authenticate, jobsController.updateStatus);
 router.put('/:id/assign', authenticate, jobsController.assignTechnician);
 router.post('/:id/notes', authenticate, jobsController.addNote);
 router.post('/:id/photos', authenticate, jobsController.addPhoto);
+router.post('/:id/files', authenticate, jobsController.addFile);
 router.delete('/:id', authenticate, jobsController.remove);
 
 module.exports = router;

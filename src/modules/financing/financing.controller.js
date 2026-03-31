@@ -29,8 +29,18 @@ const updateApplicationStatus = async (req, res) => {
   }
 };
 
+const getProviders = async (req, res) => {
+  try {
+    const providers = await financingService.getProviders();
+    res.json(providers);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getApplications,
   submitApplication,
-  updateApplicationStatus
+  updateApplicationStatus,
+  getProviders
 };

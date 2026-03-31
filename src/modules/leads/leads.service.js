@@ -5,7 +5,7 @@ const prisma = require('../../config/db');
  * Public Lead Intake
  */
 const create = async (data) => {
-  return await prisma.lead.create({
+  const lead = await prisma.lead.create({
     data: {
       id: randomUUID(),
       ...data,
@@ -13,6 +13,26 @@ const create = async (data) => {
       status: 'NEW'
     }
   });
+
+  // Trigger Notifications for all Admins/Managers
+  try {
+    const admins = await prisma.user.findMany({
+      where: { role: { in: ['ADMIN', 'MANAGER'] } }
+    });
+    const notificationsService = require('../notifications/notifications.service');
+    for (const admin of admins) {
+      notificationsService.createNotification(admin.id, {
+        type: 'LEAD_NEW',
+        title: 'New Lead Submitted',
+        message: `${lead.firstName} ${lead.lastName} requested ${lead.serviceType}`,
+        link: '/leads'
+      });
+    }
+  } catch (err) {
+    console.error('Lead Notification Error:', err);
+  }
+
+  return lead;
 };
 
 /**

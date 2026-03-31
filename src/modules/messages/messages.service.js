@@ -63,13 +63,24 @@ const sendMessage = async (senderId, receiverId, content, jobId = null) => {
   };
   if (jobId) data.jobId = parseInt(jobId);
 
-  return await prisma.message.create({
+  const message = await prisma.message.create({
     data,
     include: {
       sender: { select: { id: true, name: true, role: true } },
       job: { select: { id: true, title: true } }
     }
   });
+
+  // Trigger Notification
+  const notificationsService = require('../notifications/notifications.service');
+  notificationsService.createNotification(data.receiverId, {
+    type: 'MESSAGE',
+    title: `New Message from ${message.sender.name}`,
+    message: content.length > 50 ? content.substring(0, 50) + '...' : content,
+    link: `/messages/${senderId}${jobId ? `?jobId=${jobId}` : ''}`
+  });
+
+  return message;
 };
 
 const markRead = async (userId, otherId) => {

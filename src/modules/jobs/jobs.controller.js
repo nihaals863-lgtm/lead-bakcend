@@ -82,4 +82,13 @@ const addPhoto = async (req, res, next) => {
   }
 };
 
-module.exports = { getAll, getById, create, update, updateStatus, addNote, addPhoto, assignTechnician, remove };
+const addFile = async (req, res, next) => {
+  try {
+    const file = await jobsService.addFile(req.params.id, req.body);
+    res.status(201).json(file);
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getAll, getById, create, update, updateStatus, addNote, addPhoto, addFile, assignTechnician, remove };

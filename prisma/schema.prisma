@@ -60,6 +60,7 @@ model User {
   teamMessages     TeamMessage[]
   calendarEvents   CalendarEvent[] @relation("CreatedBy")
   jobLedgerEntries JobLedger[]
+  notifications    Notification[]
 
   @@map("user")
 }
@@ -107,9 +108,10 @@ model Job {
   customerId  Int
   estimateId  Int?      @unique(map: "Job_estimateId_key")
   title       String
-  description String?
+  description String?   @db.Text
   assignedTo  Int?
   status      JobStatus @default(SCHEDULED)
+  priority    String?   @default("Medium")
   progress    Int       @default(0)
   scheduledAt DateTime?
   completedAt DateTime?
@@ -125,8 +127,41 @@ model Job {
   messages    Message[]
   calendarEvents CalendarEvent[]
   jobLedgerEntries JobLedger[]
+  history     JobHistory[]
+  files       JobFile[]
 
+  @@index([customerId])
+  @@index([assignedTo])
   @@map("job")
+}
+
+model JobHistory {
+  id        Int      @id @default(autoincrement())
+  jobId     Int
+  action    String
+  by        String
+  type      String?  // 'status', 'assignment', 'note', etc.
+  createdAt DateTime @default(now())
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@map("job_history")
+}
+
+model JobFile {
+  id        Int      @id @default(autoincrement())
+  jobId     Int
+  name      String
+  url       String
+  type      String?
+  size      Int?
+  createdAt DateTime @default(now())
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@map("job_file")
 }
 
 model Note {
@@ -202,7 +237,7 @@ model Payment {
   createdAt DateTime @default(now())
 
   invoice   Invoice  @relation(fields: [invoiceId], references: [id], map: "Payment_invoiceId_fkey")
-  @@map("payment")
+  @@map("Payment")
 }
 
 model Timesheet {
@@ -307,11 +342,44 @@ model Material {
   id              Int      @id @default(autoincrement())
   name            String   @unique(map: "Material_name_key")
   sku             String?
-  lowesPrice      Decimal  @db.Decimal(10, 2)
-  homeDepotPrice  Decimal  @db.Decimal(10, 2)
+  qty             Int      @default(0)
+  unit            String?  // 'pcs', 'ft', 'box'
+  price           Decimal? @default(0.00) @db.Decimal(10, 2)
+  lowesPrice      Decimal? @db.Decimal(10, 2)
+  homeDepotPrice  Decimal? @db.Decimal(10, 2)
+  supplierId      Int?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  supplier        Supplier? @relation(fields: [supplierId], references: [id])
+
+  @@index([supplierId])
   @@map("material")
+}
+
+model Supplier {
+  id        Int        @id @default(autoincrement())
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  type      String?    // 'Internal', 'External'
+  materials Material[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("supplier")
+}
+
+model FinancingProvider {
+  id        Int      @id @default(autoincrement())
+  name      String
+  type      String?  // 'Internal', 'External'
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("financing_provider")
 }
 
 model CalendarEvent {
@@ -445,4 +513,20 @@ model Settings {
   updatedAt         DateTime @updatedAt
   
   @@map("settings")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  type      String   // MESSAGE, JOB_ASSIGNED, LEAD_NEW, VERIFICATION_UPDATE
+  title     String
+  message   String   @db.Text
+  link      String?  // Optional URL to navigate to (e.g., /jobs/123)
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Notification_userId_fkey")
+
+  @@index([userId], map: "Notification_userId_idx")
+  @@map("notification")
 }
