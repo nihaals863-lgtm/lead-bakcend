@@ -15,6 +15,7 @@ enum Role {
   MANAGER
   TECHNICIAN
   CUSTOMER
+  @@map("user_role")
 }
 
 enum JobStatus {
@@ -22,6 +23,7 @@ enum JobStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+  @@map("job_status")
 }
 
 enum EstimateStatus {
@@ -29,6 +31,7 @@ enum EstimateStatus {
   APPROVED
   REVISED
   REJECTED
+  @@map("estimate_status")
 }
 
 enum InvoiceStatus {
@@ -36,11 +39,12 @@ enum InvoiceStatus {
   PARTIAL
   PAID
   OVERDUE
+  @@map("invoice_status")
 }
 
 model User {
   id        Int      @id @default(autoincrement())
-  email     String   @unique
+  email     String   @unique(map: "User_email_key")
   password  String
   name      String
   role      Role     @default(CUSTOMER)
@@ -56,46 +60,52 @@ model User {
   teamMessages     TeamMessage[]
   calendarEvents   CalendarEvent[] @relation("CreatedBy")
   jobLedgerEntries JobLedger[]
+
+  @@map("user")
 }
 
 model Customer {
   id        Int      @id @default(autoincrement())
-  userId    Int?     @unique
+  userId    Int?     @unique(map: "Customer_userId_key")
   name      String
   phone     String
-  email     String   @unique
+  email     String   @unique(map: "Customer_email_key")
   address   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user      User?    @relation(fields: [userId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id], map: "Customer_userId_fkey")
   jobs      Job[]
   estimates Estimate[]
   invoices  Invoice[]
   financingApplications FinancingApplication[]
   calendarEvents        CalendarEvent[]
+
+  @@map("customer")
 }
 
 model Employee {
   id        Int      @id @default(autoincrement())
-  userId    Int      @unique
+  userId    Int      @unique(map: "Employee_userId_key")
   name      String
   phone     String?
   role      Role     @default(TECHNICIAN)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], map: "Employee_userId_fkey")
   assignedJobs Job[] @relation("AssignedTo")
   timesheets Timesheet[]
   materialRequests MaterialRequest[]
   calendarEvents   CalendarEvent[]
+
+  @@map("employee")
 }
 
 model Job {
   id          Int       @id @default(autoincrement())
   customerId  Int
-  estimateId  Int?      @unique
+  estimateId  Int?      @unique(map: "Job_estimateId_key")
   title       String
   description String?
   assignedTo  Int?
@@ -106,15 +116,17 @@ model Job {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  customer    Customer  @relation(fields: [customerId], references: [id])
-  technician  Employee? @relation("AssignedTo", fields: [assignedTo], references: [id])
-  estimate    Estimate? @relation(fields: [estimateId], references: [id])
+  customer    Customer  @relation(fields: [customerId], references: [id], map: "Job_customerId_fkey")
+  technician  Employee? @relation("AssignedTo", fields: [assignedTo], references: [id], map: "Job_assignedTo_fkey")
+  estimate    Estimate? @relation(fields: [estimateId], references: [id], map: "Job_estimateId_fkey")
   invoice     Invoice?
   notes       Note[]
   photos      Photo[]
   messages    Message[]
   calendarEvents CalendarEvent[]
   jobLedgerEntries JobLedger[]
+
+  @@map("job")
 }
 
 model Note {
@@ -123,7 +135,8 @@ model Note {
   content   String
   createdAt DateTime @default(now())
 
-  job       Job      @relation(fields: [jobId], references: [id])
+  job       Job      @relation(fields: [jobId], references: [id], map: "Note_jobId_fkey")
+  @@map("note")
 }
 
 model Photo {
@@ -132,7 +145,8 @@ model Photo {
   url       String
   createdAt DateTime @default(now())
 
-  job       Job      @relation(fields: [jobId], references: [id])
+  job       Job      @relation(fields: [jobId], references: [id], map: "Photo_jobId_fkey")
+  @@map("photo")
 }
 
 model Estimate {
@@ -145,9 +159,11 @@ model Estimate {
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
-  customer     Customer       @relation(fields: [customerId], references: [id])
+  customer     Customer       @relation(fields: [customerId], references: [id], map: "Estimate_customerId_fkey")
   items        EstimateItem[]
   job          Job?
+
+  @@map("estimate")
 }
 
 model EstimateItem {
@@ -158,21 +174,24 @@ model EstimateItem {
   unitPrice   Decimal  @db.Decimal(10, 2)
   total       Decimal  @db.Decimal(10, 2)
 
-  estimate    Estimate @relation(fields: [estimateId], references: [id])
+  estimate    Estimate @relation(fields: [estimateId], references: [id], map: "EstimateItem_estimateId_fkey")
+  @@map("estimateitem")
 }
 
 model Invoice {
   id         Int           @id @default(autoincrement())
   customerId Int
-  jobId      Int?          @unique
+  jobId      Int?          @unique(map: "Invoice_jobId_key")
   status     InvoiceStatus @default(UNPAID)
   total      Decimal       @db.Decimal(10, 2)
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
 
-  customer   Customer      @relation(fields: [customerId], references: [id])
-  job        Job?          @relation(fields: [jobId], references: [id])
+  customer   Customer      @relation(fields: [customerId], references: [id], map: "Invoice_customerId_fkey")
+  job        Job?          @relation(fields: [jobId], references: [id], map: "Invoice_jobId_fkey")
   payments   Payment[]
+
+  @@map("invoice")
 }
 
 model Payment {
@@ -182,7 +201,8 @@ model Payment {
   type      String   // LABOR, MATERIAL, etc.
   createdAt DateTime @default(now())
 
-  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], map: "Payment_invoiceId_fkey")
+  @@map("payment")
 }
 
 model Timesheet {
@@ -196,7 +216,8 @@ model Timesheet {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  employee    Employee @relation(fields: [employeeId], references: [id])
+  employee    Employee @relation(fields: [employeeId], references: [id], map: "Timesheet_employeeId_fkey")
+  @@map("timesheet")
 }
 
 model MaterialRequest {
@@ -209,7 +230,8 @@ model MaterialRequest {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  employee    Employee @relation(fields: [employeeId], references: [id])
+  employee    Employee @relation(fields: [employeeId], references: [id], map: "MaterialRequest_employeeId_fkey")
+  @@map("materialrequest")
 }
 
 model Message {
@@ -221,14 +243,15 @@ model Message {
   isRead      Boolean  @default(false)
   createdAt   DateTime @default(now())
 
-  sender      User     @relation("SentMessages", fields: [senderId], references: [id])
-  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
-  job         Job?     @relation(fields: [jobId], references: [id])
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id], map: "Message_senderId_fkey")
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id], map: "Message_receiverId_fkey")
+  job         Job?     @relation(fields: [jobId], references: [id], map: "Message_jobId_fkey")
+  @@map("message")
 }
 
 model VerificationRequest {
   id          Int      @id @default(autoincrement())
-  userId      Int      @unique
+  userId      Int      @unique(map: "VerificationRequest_userId_key")
   idPhotoUrl  String?  @db.Text
   selfieUrl   String?  @db.Text
   status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
@@ -236,7 +259,8 @@ model VerificationRequest {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user        User     @relation(fields: [userId], references: [id])
+  user        User     @relation(fields: [userId], references: [id], map: "VerificationRequest_userId_fkey")
+  @@map("verificationrequest")
 }
 
 model FinancingApplication {
@@ -252,19 +276,21 @@ model FinancingApplication {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  customer        Customer @relation(fields: [customerId], references: [id])
+  customer        Customer @relation(fields: [customerId], references: [id], map: "FinancingApplication_customerId_fkey")
+  @@map("financingapplication")
 }
 
 model Integration {
   id        Int      @id @default(autoincrement())
-  name      String   @unique
+  name      String   @unique(map: "Integration_name_key")
   category  String   // 'SUPPLIER' or 'GATEWAY'
   status    String   @default("Not Connected")
   desc      String?
   icon      String?
-  config    Json?
+  config    String?  @db.LongText
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  @@map("integration")
 }
 
 model TeamMessage {
@@ -273,17 +299,19 @@ model TeamMessage {
   content   String   @db.Text
   createdAt DateTime @default(now())
 
-  sender    User     @relation(fields: [senderId], references: [id])
+  sender    User     @relation(fields: [senderId], references: [id], map: "TeamMessage_senderId_fkey")
+  @@map("teammessage")
 }
 
 model Material {
   id              Int      @id @default(autoincrement())
-  name            String   @unique
+  name            String   @unique(map: "Material_name_key")
   sku             String?
   lowesPrice      Decimal  @db.Decimal(10, 2)
   homeDepotPrice  Decimal  @db.Decimal(10, 2)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  @@map("material")
 }
 
 model CalendarEvent {
@@ -300,15 +328,17 @@ model CalendarEvent {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  createdBy    User      @relation("CreatedBy", fields: [createdById], references: [id])
-  technician   Employee? @relation(fields: [technicianId], references: [id])
-  job          Job?      @relation(fields: [jobId], references: [id])
-  customer     Customer? @relation(fields: [customerId], references: [id])
+  createdBy    User      @relation("CreatedBy", fields: [createdById], references: [id], map: "CalendarEvent_createdById_fkey")
+  technician   Employee? @relation(fields: [technicianId], references: [id], map: "CalendarEvent_technicianId_fkey")
+  job          Job?      @relation(fields: [jobId], references: [id], map: "CalendarEvent_jobId_fkey")
+  customer     Customer? @relation(fields: [customerId], references: [id], map: "CalendarEvent_customerId_fkey")
+  @@map("calendarevent")
 }
 
 enum LedgerType {
   CREDIT
   DEBIT
+  @@map("jobledger_type")
 }
 
 enum LedgerCategory {
@@ -319,6 +349,7 @@ enum LedgerCategory {
   SUBCONTRACTOR
   EQUIPMENT
   MISC
+  @@map("jobledger_category")
 }
 
 enum PaymentMethod {
@@ -326,6 +357,7 @@ enum PaymentMethod {
   CARD
   TRANSFER
   CHECK
+  @@map("jobledger_paymentMethod")
 }
 
 enum LeadStatus {
@@ -334,6 +366,7 @@ enum LeadStatus {
   SCHEDULED
   REJECTED
   CONVERTED
+  @@map("lead_status")
 }
 
 model JobLedger {
@@ -348,12 +381,13 @@ model JobLedger {
   transactionDate DateTime       @default(now())
   createdById     Int
   createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  updatedAt       DateTime @updatedAt
 
-  job       Job  @relation(fields: [jobId], references: [id])
-  createdBy User @relation(fields: [createdById], references: [id])
+  job       Job  @relation(fields: [jobId], references: [id], map: "JobLedger_jobId_fkey")
+  createdBy User @relation(fields: [createdById], references: [id], map: "JobLedger_createdById_fkey")
 
-  @@index([jobId])
+  @@index([jobId], map: "JobLedger_jobId_idx")
+  @@map("jobledger")
 }
 
 model Lead {
@@ -379,5 +413,36 @@ model Lead {
   customerMessage   String?    @db.Text
   
   createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
+  updatedAt         DateTime @updatedAt
+  @@map("lead")
+}
+
+model Settings {
+  id                Int      @id @default(1)
+  
+  // Company Info
+  companyName       String   @default("FieldSync Pro")
+  businessEmail     String   @default("admin@fieldsync.pro")
+  phoneNumber       String   @default("(555) 000-1234")
+  
+  // Notification Settings
+  emailNotifications Boolean  @default(true)
+  smsNotifications   Boolean  @default(false)
+  pushNotifications  Boolean  @default(true)
+  dailyDigest        Boolean  @default(false)
+  
+  // Role Permissions
+  adminFullAccess    Boolean  @default(true)
+  managerDispatch    Boolean  @default(true)
+  technicianField    Boolean  @default(true)
+  customerPortal     Boolean  @default(true)
+  
+  // Security
+  twoFactorAuth      Boolean  @default(false)
+  sessionTimeout     Boolean  @default(true)
+  ipWhitelisting     Boolean  @default(false)
+
+  updatedAt         DateTime @updatedAt
+  
+  @@map("settings")
 }

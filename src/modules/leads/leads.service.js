@@ -1,3 +1,4 @@
+const { randomUUID } = require('crypto');
 const prisma = require('../../config/db');
 
 /**
@@ -6,6 +7,7 @@ const prisma = require('../../config/db');
 const create = async (data) => {
   return await prisma.lead.create({
     data: {
+      id: randomUUID(),
       ...data,
       preferredDate: data.preferredDate ? new Date(data.preferredDate) : null,
       status: 'NEW'
