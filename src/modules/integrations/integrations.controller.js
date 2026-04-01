@@ -21,8 +21,7 @@ const createIntegration = async (req, res, next) => {
 const updateIntegration = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
-    const integration = await integrationsService.updateStatus(id, status);
+    const integration = await integrationsService.updateIntegration(id, req.body);
     res.json(integration);
   } catch (error) {
     next(error);

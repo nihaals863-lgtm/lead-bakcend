@@ -1,11 +1,11 @@
 const prisma = require('../../config/db');
 
 const getAllSuppliers = async () => {
-  const providers = await prisma.integration.findMany({
+  let providers = await prisma.integration.findMany({
     where: { category: 'SUPPLIER' }
   });
   
-  // Seed defaults if nothing is found
+  // Seed defaults if nothing is found for this category
   if (providers.length === 0) {
     const defaultSuppliers = [
       { name: "Lowe's", status: 'Connected', icon: '🏪', desc: 'Building materials & supplies', category: 'SUPPLIER' },
@@ -18,22 +18,29 @@ const getAllSuppliers = async () => {
       skipDuplicates: true
     });
     
-    return await prisma.integration.findMany({
+    providers = await prisma.integration.findMany({
       where: { category: 'SUPPLIER' }
     });
   }
   
-  return providers;
+  // Always parse config for returned results
+  return providers.map(p => {
+    if (typeof p.config === 'string') {
+      try { p.config = JSON.parse(p.config); } catch (e) { p.config = {}; }
+    }
+    return p;
+  });
 };
 
 const upsertIntegration = async (data) => {
+  const configStr = typeof data.config === 'object' ? JSON.stringify(data.config) : data.config;
   return await prisma.integration.upsert({
     where: { name: data.name },
     update: {
       status: data.status,
       desc: data.desc,
       icon: data.icon,
-      config: data.config
+      config: configStr
     },
     create: {
       name: data.name,
@@ -41,7 +48,7 @@ const upsertIntegration = async (data) => {
       status: data.status,
       desc: data.desc,
       icon: data.icon,
-      config: data.config
+      config: configStr
     }
   });
 };
@@ -52,16 +59,39 @@ const deleteIntegration = async (id) => {
   });
 };
 
-const updateStatus = async (id, status) => {
-  return await prisma.integration.update({
+const updateIntegration = async (id, data) => {
+  console.log(`[INTEGRATION] Update request for ID ${id}:`, data);
+  const updateData = {};
+  
+  // Map isConnected boolean to status if provided
+  if (data.isConnected !== undefined) {
+    updateData.status = data.isConnected ? 'Connected' : 'Not Connected';
+  } else if (data.status) {
+    updateData.status = data.status;
+  }
+  
+  if (data.config !== undefined) {
+    updateData.config = typeof data.config === 'object' ? JSON.stringify(data.config) : data.config;
+  }
+  
+  const updated = await prisma.integration.update({
     where: { id: parseInt(id) },
-    data: { status }
+    data: updateData
   });
+  
+  console.log(`[INTEGRATION] Successfully updated record:`, updated);
+  
+  // Return parsed config
+  if (typeof updated.config === 'string') {
+    try { updated.config = JSON.parse(updated.config); } catch (e) { updated.config = {}; }
+  }
+  
+  return updated;
 };
 
 module.exports = {
   getAllSuppliers,
   upsertIntegration,
   deleteIntegration,
-  updateStatus
+  updateIntegration
 };

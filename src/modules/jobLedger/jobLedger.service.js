@@ -20,7 +20,7 @@ const getJobLedgerSummary = async (jobId) => {
   });
 
   const totalDeposits = ledgerEntries
-    .filter(e => e.type === 'CREDIT' && e.category === 'DEPOSIT')
+    .filter(e => e.type === 'CREDIT') // Sum all credits regardless of category (Deposit, Labor, Material)
     .reduce((sum, e) => sum + Number(e.amount), 0);
 
   const totalExpenses = ledgerEntries
@@ -43,6 +43,7 @@ const getJobLedgerSummary = async (jobId) => {
 
 /**
  * Add a new financial entry (Deposit or Expense)
+ * Supports allocation for Labor and Materials within a Deposit.
  */
 const addLedgerEntry = async (jobId, data, userId) => {
   // Validate Job Exists
@@ -54,27 +55,89 @@ const addLedgerEntry = async (jobId, data, userId) => {
     throw new Error('Job not found');
   }
 
-  // Create Entry
-  const entry = await prisma.jobLedger.create({
-    data: {
-      jobId: parseInt(jobId),
-      type: data.type,
-      category: data.category,
-      amount: data.amount,
-      paymentMethod: data.paymentMethod || null,
-      referenceNumber: data.referenceNumber || null,
-      note: data.note || null,
-      createdById: userId,
-      transactionDate: data.date ? new Date(data.date) : new Date()
+  const transactionDate = data.date ? new Date(data.date) : new Date();
+  
+  // Handle Allocation Logic
+  if (data.category === 'DEPOSIT' && data.type === 'CREDIT' && (data.labor > 0 || data.materials > 0)) {
+    const totalAmount = parseFloat(data.amount);
+    const laborAmount = parseFloat(data.labor || 0);
+    const materialsAmount = parseFloat(data.materials || 0);
+    const remainingDeposit = totalAmount - laborAmount - materialsAmount;
+
+    const entries = [];
+
+    // 1. Labor Allocation
+    if (laborAmount > 0) {
+      entries.push({
+        jobId: parseInt(jobId),
+        type: 'CREDIT',
+        category: 'LABOR',
+        amount: laborAmount,
+        paymentMethod: data.paymentMethod || null,
+        referenceNumber: data.referenceNumber || null,
+        note: `Allocated Labor: ${data.note || ''}`.trim(),
+        createdById: userId,
+        transactionDate
+      });
     }
-  });
+
+    // 2. Materials Allocation
+    if (materialsAmount > 0) {
+      entries.push({
+        jobId: parseInt(jobId),
+        type: 'CREDIT',
+        category: 'MATERIAL',
+        amount: materialsAmount,
+        paymentMethod: data.paymentMethod || null,
+        referenceNumber: data.referenceNumber || null,
+        note: `Allocated Materials: ${data.note || ''}`.trim(),
+        createdById: userId,
+        transactionDate
+      });
+    }
+
+    // 3. Remaining Deposit (Credit)
+    if (remainingDeposit > 0) {
+      entries.push({
+        jobId: parseInt(jobId),
+        type: 'CREDIT',
+        category: 'DEPOSIT',
+        amount: remainingDeposit,
+        paymentMethod: data.paymentMethod || null,
+        referenceNumber: data.referenceNumber || null,
+        note: data.note || null,
+        createdById: userId,
+        transactionDate
+      });
+    }
+
+    // Execute in Transaction
+    await prisma.$transaction(
+      entries.map(e => prisma.jobLedger.create({ data: e }))
+    );
+  } else {
+    // Standard non-allocated behavior
+    await prisma.jobLedger.create({
+      data: {
+        jobId: parseInt(jobId),
+        type: data.type,
+        category: data.category,
+        amount: data.amount,
+        paymentMethod: data.paymentMethod || null,
+        referenceNumber: data.referenceNumber || null,
+        note: data.note || null,
+        createdById: userId,
+        transactionDate
+      }
+    });
+  }
 
   // Calculate Refresh Summary
   const ledgerData = await getJobLedgerSummary(jobId);
 
   return {
-    entry: formatEntry(entry),
-    summary: ledgerData.summary
+    summary: ledgerData.summary,
+    entries: ledgerData.entries
   };
 };
 

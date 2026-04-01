@@ -2,7 +2,7 @@ const jobLedgerService = require('./jobLedger.service');
 
 const addDeposit = async (req, res, next) => {
   try {
-    const { amount, paymentMethod, referenceNumber, note, date } = req.body;
+    const { amount, labor, materials, paymentMethod, referenceNumber, note, date } = req.body;
     
     if (!amount || amount <= 0) {
       return res.status(400).json({ success: false, message: 'Valid amount is required' });
@@ -12,6 +12,8 @@ const addDeposit = async (req, res, next) => {
       type: 'CREDIT',
       category: 'DEPOSIT',
       amount,
+      labor,
+      materials,
       paymentMethod,
       referenceNumber,
       note,
