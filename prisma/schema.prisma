@@ -237,7 +237,7 @@ model Payment {
   createdAt DateTime @default(now())
 
   invoice   Invoice  @relation(fields: [invoiceId], references: [id], map: "Payment_invoiceId_fkey")
-  @@map("Payment")
+  @@map("payment")
 }
 
 model Timesheet {
