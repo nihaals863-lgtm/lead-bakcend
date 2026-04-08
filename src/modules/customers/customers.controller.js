@@ -32,8 +32,26 @@ const remove = async (req, res, next) => {
     await customersService.remove(req.params.id);
     res.status(204).send();
   } catch (error) {
+    if (error.code === 'P2003') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Cannot delete customer because they have associated records (e.g., jobs, invoices, estimates).' 
+      });
+    }
     next(error);
   }
 };
 
-module.exports = { getAll, create, update, remove };
+const getFinancialSummary = async (req, res, next) => {
+  try {
+    const summary = await customersService.getFinancialSummary(req.params.id);
+    res.json(summary);
+  } catch (error) {
+    if (error.status === 400) {
+      return res.status(400).json({ error: error.message });
+    }
+    next(error);
+  }
+};
+
+module.exports = { getAll, create, update, remove, getFinancialSummary };

@@ -21,6 +21,7 @@ const integrationsRoutes = require('./modules/integrations/integrations.routes')
 const materialsRoutes = require('./modules/materials/materials.routes');
 
 const calendarRoutes = require('./modules/calendar/calendar.routes');
+const reviewsRoutes = require('./modules/reviews/reviews.routes');
 const jobLedgerRoutes = require('./modules/jobLedger/jobLedger.routes');
 const leadRoutes = require('./modules/leads/leads.routes');
 const settingsRoutes = require('./modules/settings/settings.routes');
@@ -48,5 +49,6 @@ router.use('/job-ledger', jobLedgerRoutes);
 router.use('/leads', leadRoutes);
 router.use('/settings', settingsRoutes);
 router.use('/notifications', notificationsRoutes);
+router.use('/reviews', reviewsRoutes);
 
 module.exports = router;

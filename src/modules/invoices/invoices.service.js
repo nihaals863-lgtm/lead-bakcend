@@ -12,9 +12,39 @@ const getAll = async (user) => {
   });
 };
 const create = async (invoiceData) => {
-  return await prisma.invoice.create({
-    data: invoiceData
+  const { sendWithEstimate, estimateId, ...data } = invoiceData;
+  
+  // Link to job if estimateId is provided
+  if (estimateId && !data.jobId) {
+    const estId = typeof estimateId === 'string' ? parseInt(estimateId.replace('EST-', '')) : estimateId;
+    if (!isNaN(estId)) {
+      const job = await prisma.job.findUnique({ where: { estimateId: estId } });
+      if (job) {
+        data.jobId = job.id;
+      }
+    }
+  }
+
+  // Ensure numeric fields are correctly typed
+  if (data.customerId) data.customerId = parseInt(data.customerId);
+  if (data.total) data.total = parseFloat(data.total);
+
+  const invoice = await prisma.invoice.create({
+    data: data
   });
+
+  // Handle bundled send logic
+  if (sendWithEstimate && estimateId) {
+    const estId = typeof estimateId === 'string' ? parseInt(estimateId.replace('EST-', '')) : estimateId;
+    if (!isNaN(estId)) {
+      await prisma.estimate.update({
+        where: { id: estId },
+        data: { status: 'PENDING' }
+      });
+    }
+  }
+
+  return invoice;
 };
 
 const update = async (id, data) => {

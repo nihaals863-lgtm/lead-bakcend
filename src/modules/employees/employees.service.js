@@ -68,4 +68,95 @@ const updateTimesheetStatus = async (id, status) => {
   });
 };
 
-module.exports = { getAll, create, getAllTimesheets, updateTimesheetStatus };
+const update = async (id, employeeData) => {
+  const { email, name, role, phone, ...rest } = employeeData;
+  const employeeId = parseInt(id);
+  const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
+  
+  if (!employee) {
+    const error = new Error('Employee not found');
+    error.status = 404;
+    throw error;
+  }
+
+  return await prisma.$transaction(async (tx) => {
+    const updatedRole = role ? role.toUpperCase() : employee.role;
+
+    if (employee.userId) {
+      // Check if email is being updated and is not taken
+      if (email) {
+        const existing = await tx.user.findFirst({
+          where: { email: email, NOT: { id: employee.userId } }
+        });
+        if (existing) {
+          const err = new Error('Email is already in use by another user');
+          err.status = 400;
+          throw err;
+        }
+      }
+
+      await tx.user.update({
+        where: { id: employee.userId },
+        data: {
+          ...(email && { email }),
+          ...(name && { name }),
+          ...(role && { role: updatedRole })
+        }
+      });
+    }
+
+    return await tx.employee.update({
+      where: { id: employeeId },
+      data: {
+        ...(name && { name }),
+        ...(phone !== undefined && { phone }),
+        ...(role && { role: updatedRole })
+      },
+      include: { user: { select: { email: true, role: true } } }
+    });
+  });
+};
+
+const remove = async (id) => {
+  const employeeId = parseInt(id);
+  const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
+  
+  if (!employee) return;
+
+  return await prisma.$transaction(async (tx) => {
+    await tx.employee.delete({
+      where: { id: employeeId }
+    });
+    
+    if (employee.userId) {
+      await tx.user.delete({
+        where: { id: employee.userId }
+      });
+    }
+  });
+};
+
+const updateLocation = async (employeeId, { latitude, longitude }) => {
+  return await prisma.employee.update({
+    where: { id: parseInt(employeeId) },
+    data: {
+      latitude: parseFloat(latitude),
+      longitude: parseFloat(longitude),
+      lastLocationUpdate: new Date()
+    }
+  });
+};
+
+const getLocation = async (employeeId) => {
+  return await prisma.employee.findUnique({
+    where: { id: parseInt(employeeId) },
+    select: {
+      latitude: true,
+      longitude: true,
+      lastLocationUpdate: true,
+      name: true
+    }
+  });
+};
+
+module.exports = { getAll, create, update, remove, getAllTimesheets, updateTimesheetStatus, updateLocation, getLocation };

@@ -7,5 +7,6 @@ router.get('/', authenticate, customersController.getAll);
 router.post('/', authenticate, customersController.create);
 router.put('/:id', authenticate, customersController.update);
 router.delete('/:id', authenticate, customersController.remove);
+router.get('/:id/financial-summary', authenticate, customersController.getFinancialSummary);
 
 module.exports = router;

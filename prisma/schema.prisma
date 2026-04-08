@@ -81,6 +81,7 @@ model Customer {
   invoices  Invoice[]
   financingApplications FinancingApplication[]
   calendarEvents        CalendarEvent[]
+  reviews               Review[]
 
   @@map("customer")
 }
@@ -93,6 +94,9 @@ model Employee {
   role      Role     @default(TECHNICIAN)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  latitude  Float?
+  longitude Float?
+  lastLocationUpdate DateTime?
 
   user      User     @relation(fields: [userId], references: [id], map: "Employee_userId_fkey")
   assignedJobs Job[] @relation("AssignedTo")
@@ -129,6 +133,15 @@ model Job {
   jobLedgerEntries JobLedger[]
   history     JobHistory[]
   files       JobFile[]
+  reviews     Review[]
+
+  lastLatitude Float?
+  lastLongitude Float?
+  lastLocationUpdate DateTime?
+  trackingActive Boolean @default(false)
+  trackingStartedAt DateTime?
+  trackingStoppedAt DateTime?
+  locationHistory JobLocationHistory[]
 
   @@index([customerId])
   @@index([assignedTo])
@@ -147,6 +160,19 @@ model JobHistory {
 
   @@index([jobId])
   @@map("job_history")
+}
+
+model JobLocationHistory {
+  id          Int      @id @default(autoincrement())
+  jobId       Int
+  latitude    Float
+  longitude   Float
+  recordedAt  DateTime @default(now())
+
+  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@map("job_location_history")
 }
 
 model JobFile {
@@ -237,7 +263,7 @@ model Payment {
   createdAt DateTime @default(now())
 
   invoice   Invoice  @relation(fields: [invoiceId], references: [id], map: "Payment_invoiceId_fkey")
-  @@map("payment")
+  @@map("Payment")
 }
 
 model Timesheet {
@@ -493,6 +519,11 @@ model Settings {
   businessEmail     String   @default("admin@fieldsync.pro")
   phoneNumber       String   @default("(555) 000-1234")
   
+  // Social Media
+  facebookUrl       String?
+  instagramUrl      String?
+  websiteUrl        String?
+  
   // Notification Settings
   emailNotifications Boolean  @default(true)
   smsNotifications   Boolean  @default(false)
@@ -529,4 +560,21 @@ model Notification {
 
   @@index([userId], map: "Notification_userId_idx")
   @@map("notification")
+}
+
+model Review {
+  id          Int      @id @default(autoincrement())
+  customerId  Int
+  jobId       Int?
+  rating      Int      // 1-5
+  comment     String   @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  customer    Customer @relation(fields: [customerId], references: [id])
+  job         Job?     @relation(fields: [jobId], references: [id])
+
+  @@index([customerId])
+  @@index([jobId])
+  @@map("review")
 }

@@ -52,9 +52,69 @@ const update = async (id, customerData) => {
 };
 
 const remove = async (id) => {
-  return await prisma.customer.delete({
-    where: { id: parseInt(id) }
+  const customerId = parseInt(id);
+  const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+  
+  if (!customer) return;
+
+  return await prisma.$transaction(async (tx) => {
+    // Delete customer record first (child)
+    await tx.customer.delete({
+      where: { id: customerId }
+    });
+    
+    // Then delete associated user record (parent)
+    if (customer.userId) {
+      await tx.user.delete({
+        where: { id: customer.userId }
+      });
+    }
   });
 };
 
-module.exports = { getAll, create, update, remove };
+const getFinancialSummary = async (customerId) => {
+  const parsedId = parseInt(customerId);
+  if (isNaN(parsedId)) {
+    const err = new Error('Invalid customer ID');
+    err.status = 400;
+    throw err;
+  }
+
+  // Find all job ledger entries for jobs belonging to this customer
+  const ledgers = await prisma.jobLedger.findMany({
+    where: {
+      job: {
+        customerId: parsedId
+      }
+    }
+  });
+
+  let totalDeposits = 0;
+  let totalLaborSpent = 0;
+  let totalMaterialSpent = 0;
+
+  ledgers.forEach(entry => {
+    const amount = parseFloat(entry.amount);
+    
+    if (entry.type === 'CREDIT') {
+      totalDeposits += amount;
+    } else if (entry.type === 'DEBIT') {
+      if (entry.category === 'LABOR') {
+        totalLaborSpent += amount;
+      } else if (entry.category === 'MATERIAL') {
+        totalMaterialSpent += amount;
+      }
+    }
+  });
+
+  const remainingBalance = totalDeposits - (totalLaborSpent + totalMaterialSpent);
+
+  return {
+    totalDeposits,
+    totalLaborSpent,
+    totalMaterialSpent,
+    remainingBalance
+  };
+};
+
+module.exports = { getAll, create, update, remove, getFinancialSummary };

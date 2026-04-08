@@ -20,22 +20,27 @@ const getJobLedgerSummary = async (jobId) => {
   });
 
   const totalDeposits = ledgerEntries
-    .filter(e => e.type === 'CREDIT') // Sum all credits regardless of category (Deposit, Labor, Material)
+    .filter(e => e.type === 'CREDIT')
     .reduce((sum, e) => sum + Number(e.amount), 0);
 
-  const totalExpenses = ledgerEntries
-    .filter(e => e.type === 'DEBIT')
+  const totalLabor = ledgerEntries
+    .filter(e => e.type === 'DEBIT' && e.category === 'LABOR')
     .reduce((sum, e) => sum + Number(e.amount), 0);
 
-  const remainingBalance = totalDeposits - totalExpenses;
+  const totalMaterials = ledgerEntries
+    .filter(e => e.type === 'DEBIT' && e.category === 'MATERIAL')
+    .reduce((sum, e) => sum + Number(e.amount), 0);
+
+  const remainingBalance = totalDeposits - (totalLabor + totalMaterials);
 
   return {
     jobId: parseInt(jobId),
     summary: {
       totalDeposits,
-      totalExpenses,
+      totalLabor,
+      totalMaterials,
       remainingBalance,
-      overdrawn: remainingBalance < 0
+      overdrawn: remainingBalance <= 0
     },
     entries: ledgerEntries.map(formatEntry)
   };

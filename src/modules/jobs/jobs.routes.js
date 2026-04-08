@@ -12,7 +12,16 @@ router.patch('/:id/status', authenticate, jobsController.updateStatus);
 router.put('/:id/assign', authenticate, jobsController.assignTechnician);
 router.post('/:id/notes', authenticate, jobsController.addNote);
 router.post('/:id/photos', authenticate, jobsController.addPhoto);
+router.delete('/:id/photos', authenticate, jobsController.removePhoto);
 router.post('/:id/files', authenticate, jobsController.addFile);
 router.delete('/:id', authenticate, jobsController.remove);
+
+router.post('/:id/location', authenticate, jobsController.updateLocation);
+router.get('/:id/location', authenticate, jobsController.getLocation);
+router.get('/:id/location-history', authenticate, jobsController.getLocationHistory);
+
+router.get('/:id/tracking-status', authenticate, jobsController.getTrackingStatus);
+router.patch('/:id/start-tracking', authenticate, jobsController.startTracking);
+router.patch('/:id/stop-tracking', authenticate, jobsController.stopTracking);
 
 module.exports = router;
