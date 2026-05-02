@@ -1,0 +1,1 @@
+fetch('https://respark.in/blog/').then(r=>r.text()).then(html => { const regex = /<article[\s\S]*?<img[\s\S]*?src=\"(.*?)\"[\s\S]*?>/g; let m; while ((m = regex.exec(html)) !== null) { console.log(m[1]); } })
